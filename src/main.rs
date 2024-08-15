@@ -19,7 +19,7 @@ fn spawn_camera(
     if let Ok(window) = window_query.get_single(){
         commands.spawn(
             Camera2dBundle {
-                transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0),
+                transform: Transform::from_xyz(0.0, 0.0, 0.0),
                 ..default()
             }
         );
@@ -39,7 +39,7 @@ fn spawn_player(
         commands.spawn((
             SpriteBundle {
                 texture: asset_server.load("sprites/kenney_animal-pack/PNG/Round/penguin.png"),
-                transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0),
+                transform: Transform::from_xyz(0.0, 0.0, 0.0),
                 ..default()
             },
             Player,
@@ -58,11 +58,11 @@ fn player_input(
         }else if button_input.pressed(KeyCode::ArrowRight)
         {
             player_transform.translation += Vec3::new(10.0, 0.0, 0.0);
-        }else if button_input.pressed(KeyCode::ArrowUp) {
-            row.0 = if row.0 > 0 { row.0 - 1} else { 0 };
-        }else if button_input.pressed(KeyCode::ArrowDown)
-        {
+        }else if button_input.just_pressed(KeyCode::ArrowUp) {
             row.0 = if row.0 < NUMBER_OF_ROWS { row.0 + 1 } else { row.0 };
+        }else if button_input.just_pressed(KeyCode::ArrowDown)
+        {
+            row.0 = if row.0 > 0 { row.0 - 1} else { 0 };
         }
     }
 }
@@ -76,7 +76,7 @@ fn on_row_updated(
         = (player_query.get_single_mut(), window_query.get_single()){
         println!("Row number: {}", row.0);
         println!("Translation before: {}", transform.translation);
-        transform.translation = Vec3::new(0.0, (window.height() / NUMBER_OF_ROWS as f32) * row.0 as f32, 0.0);
+        transform.translation = Vec3::new(0.0, (window.height() / NUMBER_OF_ROWS as f32) * row.0 as f32 - window.height() / 2.0, 0.0);
         println!("Translation now: {}", transform.translation);
     }
 }
