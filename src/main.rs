@@ -14,7 +14,6 @@ fn main() {
 }
 
 fn spawn_camera(
-    window_query: Query<&Window, With<PrimaryWindow>>,
     mut commands: Commands
 )
 {
@@ -30,22 +29,19 @@ fn spawn_camera(
 struct Player;
 
 fn spawn_player(
-    window_query: Query<&Window, With<PrimaryWindow>>,
     asset_server: Res<AssetServer>,
     mut commands: Commands
 )
 {
-    if let Ok(window) = window_query.get_single(){
-        commands.spawn((
-            SpriteBundle {
-                texture: asset_server.load("sprites/kenney_animal-pack/PNG/Round/penguin.png"),
-                transform: Transform::from_xyz(0.0, 0.0, 0.0).with_scale(Vec3::new(0.2, 0.2, 1.0)),
-                ..default()
-            },
-            Player,
-            Row(4)
-        ));
-    }
+    commands.spawn((
+        SpriteBundle {
+            texture: asset_server.load("sprites/kenney_animal-pack/PNG/Round/penguin.png"),
+            transform: Transform::from_xyz(0.0, 0.0, 0.0).with_scale(Vec3::new(0.2, 0.2, 1.0)),
+            ..default()
+        },
+        Player,
+        Row(4)
+    ));
 }
 
 fn player_input(
@@ -92,6 +88,9 @@ struct Lane {
     obstacle_speed: f32,
 }
 
+#[derive(Component)]
+struct LaneMarker;
+
 fn spawn_lanes(
     window_query: Query<&Window, With<PrimaryWindow>>,
     asset_server: Res<AssetServer>,
@@ -114,17 +113,18 @@ fn spawn_lanes(
                     num_obstacles: 4,
                     obstacle_speed: 5.0 * i as f32,
                 },
+                LaneMarker,
             ));
         }
     }
 }
 
 fn on_resize_system(
-    mut lane_query: Query<(&mut Sprite, &mut Transform, &Lane), With<Lane>>,
+    mut lane_query: Query<(&mut Sprite, &mut Transform, &Lane), With<LaneMarker>>,
     mut resize_reader: EventReader<WindowResized>,
 ) {
     for e in resize_reader.read() {
-        if let Ok((mut sprite, mut transform, lane)) = lane_query.get_single_mut() {
+        for (mut sprite, mut transform, lane) in &mut lane_query {
             sprite.rect = Some(Rect { min: Vec2::new(0.0, 0.0), max: Vec2::new(e.width, 64.0)});
             *transform.as_mut() = Transform::from_xyz(0.0, row_to_y_pos(lane.index, e.height), 0.0).with_scale(Vec3::new(TILE_SIZE, TILE_SIZE, 1.0));
         }
