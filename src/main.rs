@@ -8,7 +8,7 @@ fn main() {
     App::new()
     .add_plugins(DefaultPlugins)
     .add_systems(Startup, (spawn_camera, spawn_player, spawn_lanes))
-    .add_systems(FixedUpdate, (player_input, on_row_updated).chain())
+    .add_systems(FixedUpdate, (player_input, obstacle_move, on_row_updated).chain())
     .add_systems(Update, on_resize_system)
     .run();
 }
@@ -84,12 +84,15 @@ struct Row(u8);
 #[derive(Component)]
 struct Lane {
     index: u8,
-    num_obstacles: u8,
-    obstacle_speed: f32,
 }
 
 #[derive(Component)]
-struct LaneMarker;
+struct Obstacle {
+    x_index: u8,
+    y_index: u8,
+    speed: f32,
+    progress: f32,
+}
 
 fn spawn_lanes(
     window_query: Query<&Window, With<PrimaryWindow>>,
@@ -98,6 +101,7 @@ fn spawn_lanes(
 ) {
     if let Ok(window) = window_query.get_single() {
         for i in 2..NUMBER_OF_ROWS {
+            let lane_y = row_to_y_pos(i, window.height());
             commands.spawn((
                 SpriteBundle {
                     sprite: Sprite {
@@ -105,22 +109,49 @@ fn spawn_lanes(
                         ..default()
                     },
                     texture: asset_server.load("sprites/kenney_topdown-roads/PNG/Default size/tileGrass_roadEast.png"),
-                    transform: Transform::from_xyz(0.0, row_to_y_pos(i, window.height()), 0.0).with_scale(Vec3::new(TILE_SIZE, TILE_SIZE, 1.0)),
+                    transform: Transform::from_xyz(0.0, lane_y, 0.0).with_scale(Vec3::new(TILE_SIZE, TILE_SIZE, 1.0)),
                     ..default()
                 },
                 Lane {
                     index: i,
-                    num_obstacles: 4,
-                    obstacle_speed: 5.0 * i as f32,
                 },
-                LaneMarker,
             ));
+
+            const NUM_OBSTACLES: u8 = 4;
+            let speed_offset: f32 = rand::random::<f32>() % 1.0;
+            for j in 0..NUM_OBSTACLES {
+                commands.spawn((
+                    SpriteBundle {
+                        texture: asset_server.load("sprites/kenney_pixel-vehicle-pack/PNG/Cars/bus.png"),
+                        ..default()
+                    },
+                    Obstacle {
+                        x_index: j,
+                        y_index: i,
+                        speed: 0.001 * (i as f32 + speed_offset),
+                        progress: j as f32 / NUM_OBSTACLES as f32,
+                    }
+                ));
+            }
+        }
+    }
+}
+
+fn obstacle_move(
+    window_query: Query<&Window, With<PrimaryWindow>>,
+    mut obstacle_query: Query<(&mut Transform, &mut Obstacle), With<Obstacle>>,
+) {
+    if let Ok(window) = window_query.get_single() {
+        for (mut transform, mut obstacle) in &mut obstacle_query {
+            obstacle.progress = (obstacle.progress + obstacle.speed) % 1.0;
+            *transform.as_mut() = Transform::from_xyz(obstacle.progress * window.width() - window.width() / 2.0, row_to_y_pos(obstacle.y_index, window.height()), 1.0)
         }
     }
 }
 
 fn on_resize_system(
-    mut lane_query: Query<(&mut Sprite, &mut Transform, &Lane), With<LaneMarker>>,
+    mut lane_query: Query<(&mut Sprite, &mut Transform, &Lane), (With<Lane>, Without<Obstacle>)>,
+    mut obstacle_query: Query<(&mut Transform, &mut Obstacle), (With<Obstacle>, Without<Lane>)>,
     mut resize_reader: EventReader<WindowResized>,
 ) {
     for e in resize_reader.read() {
@@ -128,12 +159,8 @@ fn on_resize_system(
             sprite.rect = Some(Rect { min: Vec2::new(0.0, 0.0), max: Vec2::new(e.width, 64.0)});
             *transform.as_mut() = Transform::from_xyz(0.0, row_to_y_pos(lane.index, e.height), 0.0).with_scale(Vec3::new(TILE_SIZE, TILE_SIZE, 1.0));
         }
+        // for (mut transform) in &mut obstacle_query {
+        //     //*transform.as_mut() = Transform::from_xyz(x_pos, )
+        // }
     }
 }
-
-//Todo: (Milestone 1)
-// Camera system
-// Player sprite spawning system
-//  - Player component
-//  - Sprite component
-// Player movement system
