@@ -3,13 +3,14 @@ use bevy::window::{PrimaryWindow, WindowResized};
 
 const NUMBER_OF_ROWS: u8 = 9;
 const TILE_SIZE: f32 = 1.28;
+const PLAYER_LAYER: f32 = 10.0;
 
 fn main() {
     App::new()
     .add_plugins(DefaultPlugins)
     .add_systems(Startup, (spawn_camera, spawn_player, spawn_lanes))
-    .add_systems(FixedUpdate, (player_input, obstacle_move, on_row_updated).chain())
-    .add_systems(Update, on_resize_system)
+    .add_systems(FixedUpdate, (on_row_updated, obstacle_move).chain())
+    .add_systems(Update, (player_input, on_resize_system))
     .run();
 }
 
@@ -36,7 +37,7 @@ fn spawn_player(
     commands.spawn((
         SpriteBundle {
             texture: asset_server.load("sprites/kenney_animal-pack/PNG/Round/penguin.png"),
-            transform: Transform::from_xyz(0.0, 0.0, 0.0).with_scale(Vec3::new(0.2, 0.2, 1.0)),
+            transform: Transform::from_xyz(0.0, 0.0, PLAYER_LAYER).with_scale(Vec3::new(0.2, 0.2, 0.0)),
             ..default()
         },
         Player,
@@ -50,10 +51,10 @@ fn player_input(
 ){
     if let Ok((mut player_transform, mut row)) = player_query.get_single_mut(){
         if button_input.pressed(KeyCode::ArrowLeft) {
-            player_transform.translation += Vec3::new(-10.0, 0.0, 0.0);
+            player_transform.translation += Vec3::new(-10.0, 0.0, PLAYER_LAYER);
         }else if button_input.pressed(KeyCode::ArrowRight)
         {
-            player_transform.translation += Vec3::new(10.0, 0.0, 0.0);
+            player_transform.translation += Vec3::new(10.0, 0.0, PLAYER_LAYER);
         }else if button_input.just_pressed(KeyCode::ArrowUp) {
             row.0 = if row.0 < NUMBER_OF_ROWS - 1 { row.0 + 1 } else { row.0 };
         }else if button_input.just_pressed(KeyCode::ArrowDown)
@@ -74,7 +75,9 @@ fn on_row_updated(
 {
     if let (Ok((mut transform, row)), Ok(window)) 
         = (player_query.get_single_mut(), window_query.get_single()){
-        transform.translation = Vec3::new(0.0, row_to_y_pos(row.0, window.height()), 1.0);
+        println!("Translation before Row Update: {}", transform.translation);
+        transform.translation = Vec3::new(transform.translation.x, row_to_y_pos(row.0, window.height()), transform.translation.z);
+        println!("Translation after Row Update: {}", transform.translation);
     }
 }
 
@@ -159,8 +162,5 @@ fn on_resize_system(
             sprite.rect = Some(Rect { min: Vec2::new(0.0, 0.0), max: Vec2::new(e.width, 64.0)});
             *transform.as_mut() = Transform::from_xyz(0.0, row_to_y_pos(lane.index, e.height), 0.0).with_scale(Vec3::new(TILE_SIZE, TILE_SIZE, 1.0));
         }
-        // for (mut transform) in &mut obstacle_query {
-        //     //*transform.as_mut() = Transform::from_xyz(x_pos, )
-        // }
     }
 }
