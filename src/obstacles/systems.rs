@@ -8,8 +8,7 @@ use crate::components::Lane;
 use crate::constants::*;
 
 pub fn on_resize_window(
-    mut lane_query: Query<(&mut Sprite, &mut Transform, &Lane), (With<Lane>, Without<Obstacle>)>,
-    mut obstacle_query: Query<(&mut Transform, &mut Obstacle), (With<Obstacle>, Without<Lane>)>,
+    mut lane_query: Query<(&mut Sprite, &mut Transform, &Lane), With<Lane>>,
     mut resize_reader: EventReader<WindowResized>,
 ) {
     for e in resize_reader.read() {
@@ -52,7 +51,7 @@ pub fn spawn_lanes(
                         ..default()
                     },
                     Obstacle {
-                        x_index: j,
+                        //x_index: j, //TODO:
                         y_index: i,
                         speed: 0.001 * (i as f32 + speed_offset),
                         progress: j as f32 / NUM_OBSTACLES as f32,
