@@ -94,30 +94,53 @@ pub fn obstacle_move(
 pub fn on_player_hit(
     mut event_writer_player_hit: EventWriter<PlayerHitEvent>,
     obstacle_query: Query<(&Transform, &Handle<Image>, &Row), (With<Obstacle>, Without<Player>)>,
-    player_query: Query<(&Transform, &Handle<Image>, &Row, Entity), (With<Player>, Without<Obstacle>)>,
-    assets: Res<Assets<Image>>
+    player_query: Query<
+        (&Transform, &Handle<Image>, &Row, Entity),
+        (With<Player>, Without<Obstacle>),
+    >,
+    assets: Res<Assets<Image>>,
 ) {
     for (obstacle_transform, obstacle_image_handle, obstacle_row) in obstacle_query.iter() {
-        for (player_transform, player_image_handle, player_row, player_entity) in player_query.iter() {
+        for (player_transform, player_image_handle, player_row, player_entity) in
+            player_query.iter()
+        {
             if obstacle_row != player_row {
                 continue;
             }
-            
-            let obstacle_dimensions_uvec = assets.get(obstacle_image_handle).or_else(|| { println!("Failed to find obstacle image"); None }).unwrap().size();
-            let player_dimensions_uvec = assets.get(player_image_handle).or_else(|| { println!("Failed to find obstacle image"); None }).unwrap().size();
 
-            let obstacle_dimensions = Vec2::new(obstacle_dimensions_uvec.x as f32, obstacle_dimensions_uvec.y as f32);
-            let player_dimensions = Vec2::new(player_dimensions_uvec.x as f32, player_dimensions_uvec.y as f32);
+            if let (Some(obstacle_image), Some(player_image)) = (
+                assets.get(obstacle_image_handle),
+                assets.get(player_image_handle),
+            ) {
+                let player_dimensions_uvec = player_image.size();
+                let obstacle_dimensions_uvec = obstacle_image.size();
 
-            let obstacle_bounding_box = Rect::from_center_size(obstacle_transform.translation.truncate(), 
-                obstacle_dimensions * obstacle_transform.scale.truncate()
-            );
-            let player_bounding_box = Rect::from_center_size(player_transform.translation.truncate(),
-                player_dimensions * player_transform.scale.truncate()
-            );
+                let obstacle_dimensions = Vec2::new(
+                    obstacle_dimensions_uvec.x as f32,
+                    obstacle_dimensions_uvec.y as f32,
+                );
+                let player_dimensions = Vec2::new(
+                    player_dimensions_uvec.x as f32,
+                    player_dimensions_uvec.y as f32,
+                );
 
-            if !player_bounding_box.intersect(obstacle_bounding_box).is_empty() {
-                event_writer_player_hit.send(PlayerHitEvent{player_entity});
+                let obstacle_bounding_box = Rect::from_center_size(
+                    obstacle_transform.translation.truncate(),
+                    obstacle_dimensions * obstacle_transform.scale.truncate(),
+                );
+                let player_bounding_box = Rect::from_center_size(
+                    player_transform.translation.truncate(),
+                    player_dimensions * player_transform.scale.truncate(),
+                );
+
+                if !player_bounding_box
+                    .intersect(obstacle_bounding_box)
+                    .is_empty()
+                {
+                    event_writer_player_hit.send(PlayerHitEvent { player_entity });
+                }
+            } else {
+                debug!("Could not get a hold of Obstacle Image or of Player Image");
             }
         }
     }

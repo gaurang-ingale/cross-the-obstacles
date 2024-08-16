@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy::window::{PrimaryWindow, Window};
 
 use crate::constants::*;
+use crate::obstacles::events::PlayerHitEvent;
 use super::components::Player;
 use crate::components::Row;
 
@@ -50,5 +51,20 @@ pub fn on_row_updated(
     if let (Ok((mut transform, row)), Ok(window)) 
         = (player_query.get_single_mut(), window_query.get_single()){
         transform.translation = Vec3::new(transform.translation.x, row_to_y_pos(row.0, window.height()), transform.translation.z);
+    }
+}
+
+pub fn on_player_hit(
+    mut player_hit_event_reader: EventReader<PlayerHitEvent>,
+    mut player_query: Query<(&mut Transform, &mut Row, Entity), With<Player>>
+)
+{
+    for event in player_hit_event_reader.read(){
+        for (mut transform, mut row, player_entity) in player_query.iter_mut(){
+            if player_entity == event.player_entity{
+                transform.translation = Vec3::new(0.0, transform.translation.y, transform.translation.z);
+                row.0 = 1;
+            }
+        }
     }
 }
