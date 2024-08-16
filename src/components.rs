@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-#[derive(Component)]
+#[derive(Component, PartialEq, Eq)]
 pub struct Row(pub u8);
 
 #[derive(Component)]
