@@ -49,8 +49,6 @@ pub fn on_row_updated(
 {
     if let (Ok((mut transform, row)), Ok(window)) 
         = (player_query.get_single_mut(), window_query.get_single()){
-        println!("Translation before Row Update: {}", transform.translation);
         transform.translation = Vec3::new(transform.translation.x, row_to_y_pos(row.0, window.height()), transform.translation.z);
-        println!("Translation after Row Update: {}", transform.translation);
     }
 }
