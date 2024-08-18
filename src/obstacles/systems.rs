@@ -42,7 +42,7 @@ pub fn spawn_lanes(
     mut commands: Commands,
 ) {
     if let Ok(window) = window_query.get_single() {
-        for i in 2..NUMBER_OF_ROWS {
+        for i in 2..(NUMBER_OF_ROWS - 1) {
             commands.spawn((
                 SpriteBundle {
                     sprite: Sprite {
