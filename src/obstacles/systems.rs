@@ -13,7 +13,7 @@ use crate::components::Row;
 
 pub fn on_resize_window(
     mut lane_query: Query<(&mut Sprite, &mut Transform, &Lane), (With<Lane>, Without<Background>)>,
-    mut background_query: Query<(&mut Sprite), (With<Background>, Without<Lane>)>,
+    mut background_query: Query<&mut Sprite, (With<Background>, Without<Lane>)>,
     mut resize_reader: EventReader<WindowResized>,
 ) {
     for e in resize_reader.read() {
@@ -25,7 +25,7 @@ pub fn on_resize_window(
             *transform.as_mut() = Transform::from_xyz(0.0, row_to_y_pos(lane.index, e.height), 0.0)
                 .with_scale(Vec3::new(TILE_SIZE, TILE_SIZE, 1.0));
         }
-        for (mut sprite) in &mut background_query {
+        for mut sprite in &mut background_query {
             sprite.rect = Some(Rect {
                 min: Vec2::new(0.0, 0.0),
                 max: Vec2::new(e.width, e.height),
@@ -123,33 +123,46 @@ pub fn on_player_hit(
     assets: Res<Assets<Image>>
 ) {
     for (obstacle_transform, obstacle_image_handle, obstacle_row) in obstacle_query.iter() {
-        for (player_transform, player_image_handle, player_row, player_entity) in player_query.iter() {
+        for (player_transform, player_image_handle, player_row, player_entity) in
+            player_query.iter()
+        {
             if obstacle_row != player_row {
                 continue;
             }
 
-            let obstacle_image = assets.get(obstacle_image_handle);
-            let player_image = assets.get(player_image_handle);
+            if let (Some(obstacle_image), Some(player_image)) = (
+                assets.get(obstacle_image_handle),
+                assets.get(player_image_handle),
+            ) {
+                let player_dimensions_uvec = player_image.size();
+                let obstacle_dimensions_uvec = obstacle_image.size();
 
-            if obstacle_image.is_none() || player_image.is_none() {
-                continue
-            }
-            
-            let obstacle_dimensions_uvec = assets.get(obstacle_image_handle).or_else(|| { println!("Failed to find obstacle image"); None }).unwrap().size();
-            let player_dimensions_uvec = assets.get(player_image_handle).or_else(|| { println!("Failed to find obstacle image"); None }).unwrap().size();
+                let obstacle_dimensions = Vec2::new(
+                    obstacle_dimensions_uvec.x as f32,
+                    obstacle_dimensions_uvec.y as f32,
+                );
+                let player_dimensions = Vec2::new(
+                    player_dimensions_uvec.x as f32,
+                    player_dimensions_uvec.y as f32,
+                );
 
-            let obstacle_dimensions = Vec2::new(obstacle_dimensions_uvec.x as f32, obstacle_dimensions_uvec.y as f32);
-            let player_dimensions = Vec2::new(player_dimensions_uvec.x as f32, player_dimensions_uvec.y as f32);
+                let obstacle_bounding_box = Rect::from_center_size(
+                    obstacle_transform.translation.truncate(),
+                    obstacle_dimensions * obstacle_transform.scale.truncate(),
+                );
+                let player_bounding_box = Rect::from_center_size(
+                    player_transform.translation.truncate(),
+                    player_dimensions * player_transform.scale.truncate(),
+                );
 
-            let obstacle_bounding_box = Rect::from_center_size(obstacle_transform.translation.truncate(), 
-                obstacle_dimensions * obstacle_transform.scale.truncate()
-            );
-            let player_bounding_box = Rect::from_center_size(player_transform.translation.truncate(),
-                player_dimensions * player_transform.scale.truncate()
-            );
-
-            if !player_bounding_box.intersect(obstacle_bounding_box).is_empty() {
-                event_writer_player_hit.send(PlayerHitEvent{player_entity});
+                if !player_bounding_box
+                    .intersect(obstacle_bounding_box)
+                    .is_empty()
+                {
+                    event_writer_player_hit.send(PlayerHitEvent { player_entity });
+                }
+            } else {
+                debug!("Could not get a hold of Obstacle Image or of Player Image");
             }
         }
     }
