@@ -1,11 +1,13 @@
 use bevy::prelude::*;
 use bevy::window::{PrimaryWindow, WindowResized};
+use rand::Rng;
 
 use super::components::Obstacle;
 use crate::components::{Background, Lane};
 use crate::helpers::row_to_y_pos;
 
 use crate::constants::*;
+use crate::obstacles::components::ObstacleDirection;
 
 use super::super::player::components::Player;
 use super::events::PlayerHitEvent;
@@ -80,18 +82,36 @@ pub fn spawn_lanes(
             ));
 
             const NUM_OBSTACLES: u8 = 4;
+            let mut rng = rand::thread_rng();
+
             let speed_offset: f32 = rand::random::<f32>() % 1.0;
+            let random_direction = rng.gen::<bool>();
+
+            let mut flip_x: bool = false;
+
+            let obstacle_direction: ObstacleDirection = if random_direction{
+                flip_x = true;
+                ObstacleDirection::Left
+            }else {
+                ObstacleDirection::Right
+            };
+
             for j in 0..NUM_OBSTACLES {
                 commands.spawn((
                     SpriteBundle {
+                        sprite: Sprite {
+                            flip_x,
+                            ..default()
+                        },
                         texture: asset_server
                             .load("sprites/kenney_pixel-vehicle-pack/PNG/Cars/bus.png"),
                         ..default()
                     },
                     Obstacle {
                         //x_index: j, //TODO:
-                        speed: 0.001 * (i as f32 + speed_offset),
+                        speed: 0.0003 * (i as f32 + speed_offset),
                         progress: j as f32 / NUM_OBSTACLES as f32,
+                        direction: obstacle_direction
                     },
                     Row(i),
                 ));
@@ -107,11 +127,21 @@ pub fn obstacle_move(
     if let Ok(window) = window_query.get_single() {
         for (mut transform, mut obstacle, row) in &mut obstacle_query {
             obstacle.progress = (obstacle.progress + obstacle.speed) % 1.0;
-            *transform.as_mut() = Transform::from_xyz(
-                obstacle.progress * window.width() - window.width() / 2.0,
-                row_to_y_pos(row.0, window.height()),
-                1.0,
-            );
+            
+            if obstacle.direction == ObstacleDirection::Right{
+                *transform.as_mut() = Transform::from_xyz(
+                    obstacle.progress * window.width() - window.width() / 2.0,
+                    row_to_y_pos(row.0, window.height()),
+                    1.0,
+                );
+            }else{
+                *transform.as_mut() = Transform::from_xyz(
+                    window.width() / 2.0 - obstacle.progress * window.width(),
+                    row_to_y_pos(row.0, window.height()),
+                    1.0,
+                );
+            }
+
         }
     }
 }
