@@ -7,3 +7,6 @@ pub struct Row(pub u8);
 pub struct Lane {
     pub index: u8,
 }
+
+#[derive(Component)]
+pub struct Background;

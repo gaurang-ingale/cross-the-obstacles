@@ -3,7 +3,7 @@ use bevy::window::{PrimaryWindow, WindowResized};
 use rand::Rng;
 
 use super::components::Obstacle;
-use crate::components::Lane;
+use crate::components::{Background, Lane};
 use crate::helpers::row_to_y_pos;
 
 use crate::constants::*;
@@ -14,7 +14,8 @@ use super::events::PlayerHitEvent;
 use crate::components::Row;
 
 pub fn on_resize_window(
-    mut lane_query: Query<(&mut Sprite, &mut Transform, &Lane), With<Lane>>,
+    mut lane_query: Query<(&mut Sprite, &mut Transform, &Lane), (With<Lane>, Without<Background>)>,
+    mut background_query: Query<&mut Sprite, (With<Background>, Without<Lane>)>,
     mut resize_reader: EventReader<WindowResized>,
 ) {
     for e in resize_reader.read() {
@@ -26,6 +27,12 @@ pub fn on_resize_window(
             *transform.as_mut() = Transform::from_xyz(0.0, row_to_y_pos(lane.index, e.height), 0.0)
                 .with_scale(Vec3::new(TILE_SIZE, TILE_SIZE, 1.0));
         }
+        for mut sprite in &mut background_query {
+            sprite.rect = Some(Rect {
+                min: Vec2::new(0.0, 0.0),
+                max: Vec2::new(e.width, e.height),
+            })
+        }
     }
 }
 
@@ -36,6 +43,24 @@ pub fn spawn_lanes(
 ) {
     if let Ok(window) = window_query.get_single() {
         for i in 2..NUMBER_OF_ROWS {
+            commands.spawn((
+                SpriteBundle {
+                    sprite: Sprite {
+                        rect: Some(Rect {
+                            min: Vec2::new(0.0, 0.0),
+                            max: Vec2::new(window.width(), window.height()),
+                        }),
+                        ..default()
+                    },
+                    texture: asset_server.load(
+                        "sprites/kenney_topdown-roads/PNG/Default size/tileGrass1.png"
+                    ),
+                    transform: Transform::from_xyz(0.0, 0.0, -1.0),
+                    ..default()
+                },
+                Background
+            ));
+
             let lane_y = row_to_y_pos(i, window.height());
             commands.spawn((
                 SpriteBundle {
@@ -124,11 +149,8 @@ pub fn obstacle_move(
 pub fn on_player_hit(
     mut event_writer_player_hit: EventWriter<PlayerHitEvent>,
     obstacle_query: Query<(&Transform, &Handle<Image>, &Row), (With<Obstacle>, Without<Player>)>,
-    player_query: Query<
-        (&Transform, &Handle<Image>, &Row, Entity),
-        (With<Player>, Without<Obstacle>),
-    >,
-    assets: Res<Assets<Image>>,
+    player_query: Query<(&Transform, &Handle<Image>, &Row, Entity), (With<Player>, Without<Obstacle>)>,
+    assets: Res<Assets<Image>>
 ) {
     for (obstacle_transform, obstacle_image_handle, obstacle_row) in obstacle_query.iter() {
         for (player_transform, player_image_handle, player_row, player_entity) in
