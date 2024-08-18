@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy::window::{PrimaryWindow, WindowResized};
 
 use super::components::Obstacle;
-use crate::components::Lane;
+use crate::components::{Background, Lane};
 use crate::helpers::row_to_y_pos;
 
 use crate::constants::*;
@@ -12,7 +12,8 @@ use super::events::PlayerHitEvent;
 use crate::components::Row;
 
 pub fn on_resize_window(
-    mut lane_query: Query<(&mut Sprite, &mut Transform, &Lane), With<Lane>>,
+    mut lane_query: Query<(&mut Sprite, &mut Transform, &Lane), (With<Lane>, Without<Background>)>,
+    mut background_query: Query<(&mut Sprite), (With<Background>, Without<Lane>)>,
     mut resize_reader: EventReader<WindowResized>,
 ) {
     for e in resize_reader.read() {
@@ -24,6 +25,12 @@ pub fn on_resize_window(
             *transform.as_mut() = Transform::from_xyz(0.0, row_to_y_pos(lane.index, e.height), 0.0)
                 .with_scale(Vec3::new(TILE_SIZE, TILE_SIZE, 1.0));
         }
+        for (mut sprite) in &mut background_query {
+            sprite.rect = Some(Rect {
+                min: Vec2::new(0.0, 0.0),
+                max: Vec2::new(e.width, e.height),
+            })
+        }
     }
 }
 
@@ -34,7 +41,7 @@ pub fn spawn_lanes(
 ) {
     if let Ok(window) = window_query.get_single() {
         for i in 2..NUMBER_OF_ROWS {
-            commands.spawn(
+            commands.spawn((
                 SpriteBundle {
                     sprite: Sprite {
                         rect: Some(Rect {
@@ -48,8 +55,9 @@ pub fn spawn_lanes(
                     ),
                     transform: Transform::from_xyz(0.0, 0.0, -1.0),
                     ..default()
-                }
-            );
+                },
+                Background
+            ));
 
             let lane_y = row_to_y_pos(i, window.height());
             commands.spawn((
@@ -118,6 +126,13 @@ pub fn on_player_hit(
         for (player_transform, player_image_handle, player_row, player_entity) in player_query.iter() {
             if obstacle_row != player_row {
                 continue;
+            }
+
+            let obstacle_image = assets.get(obstacle_image_handle);
+            let player_image = assets.get(player_image_handle);
+
+            if obstacle_image.is_none() || player_image.is_none() {
+                continue
             }
             
             let obstacle_dimensions_uvec = assets.get(obstacle_image_handle).or_else(|| { println!("Failed to find obstacle image"); None }).unwrap().size();
