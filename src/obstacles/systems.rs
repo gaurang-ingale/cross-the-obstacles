@@ -84,7 +84,7 @@ pub fn spawn_lanes(
                     },
                     Obstacle {
                         //x_index: j, //TODO:
-                        speed: 0.001 * (i as f32 + speed_offset),
+                        speed: 0.0003 * (i as f32 + speed_offset),
                         progress: j as f32 / NUM_OBSTACLES as f32,
                         direction: obstacle_direction
                     },

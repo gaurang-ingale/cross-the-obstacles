@@ -30,10 +30,10 @@ pub fn player_input(
 ){
     if let Ok((mut player_transform, mut row)) = player_query.get_single_mut(){
         if button_input.pressed(KeyCode::ArrowLeft) {
-            player_transform.translation += Vec3::new(-10.0, 0.0, 0.0);
+            player_transform.translation += Vec3::new(PLAYER_HORIZONTAL_MOVEMENT_SPEED * -1.0, 0.0, 0.0);
         }else if button_input.pressed(KeyCode::ArrowRight)
         {
-            player_transform.translation += Vec3::new(10.0, 0.0, 0.0);
+            player_transform.translation += Vec3::new(PLAYER_HORIZONTAL_MOVEMENT_SPEED, 0.0, 0.0);
         }else if button_input.just_pressed(KeyCode::ArrowUp) {
             row.0 = if row.0 < NUMBER_OF_ROWS - 1 { row.0 + 1 } else { row.0 };
         }else if button_input.just_pressed(KeyCode::ArrowDown)
